@@ -3,9 +3,6 @@ name: CI
 on:
   push:
     branches: ["**"]
-    tags:
-      - "v*"
-      - "V*"
   pull_request:
     branches: ["**"]
 
@@ -94,11 +91,19 @@ jobs:
     name: Create GitHub Release
     runs-on: windows-latest
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/V')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
 
     steps:
+      - name: Prepare release metadata
+        id: release-meta
+        shell: pwsh
+        run: |
+          $tag = "v1.0.${{ github.run_number }}"
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "name=STM32 Easy Flash $tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -108,9 +113,11 @@ jobs:
       - name: Create GitHub Release and upload .exe
         uses: softprops/action-gh-release@v2
         with:
-          name: "STM32 Easy Flash ${{ github.ref_name }}"
+          tag_name: ${{ steps.release-meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.release-meta.outputs.name }}
           body: |
-            ## STM32 Easy Flash ${{ github.ref_name }}
+            ## STM32 Easy Flash ${{ steps.release-meta.outputs.tag }}
 
             ### Download
             Download `stm32_easy_flash.exe` below and run it directly - no Python installation required.
@@ -130,6 +137,7 @@ jobs:
             ### Requirements
             - STM32CubeProgrammer installed at the configured path
             - ST-LINK or compatible debug adapter connected
+          generate_release_notes: true
           draft: false
           prerelease: false
           files: dist/stm32_easy_flash.exe
