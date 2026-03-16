@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: ["**"]
+    tags: ["v*"]
   pull_request:
     branches: ["**"]
 
@@ -48,8 +49,8 @@ jobs:
           --fail-under=7.0
           --disable=import-error
 
-  build:
-    name: Build Executable
+  build-windows:
+    name: Build Windows Executable
     runs-on: windows-latest
     needs: lint
 
@@ -90,30 +91,83 @@ jobs:
           path: dist/stm32_easy_flash.exe
           retention-days: 30
 
+  build-macos:
+    name: Build macOS Executable
+    runs-on: macos-latest
+    needs: lint
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore build environment cache
+        id: build-cache
+        uses: actions/cache@v4
+        with:
+          path: .venv-build
+          key: ${{ runner.os }}-py311-build-${{ hashFiles('requirements/build.txt', 'stm32_easy_flash.spec') }}
+          restore-keys: |
+            ${{ runner.os }}-py311-build-
+
+      - name: Create build environment and install dependencies
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          python3 -m venv .venv-build
+          .venv-build/bin/python -m pip install --upgrade pip
+          .venv-build/bin/python -m pip install -r requirements/build.txt
+
+      - name: Build binary with PyInstaller
+        run: .venv-build/bin/python -m PyInstaller stm32_easy_flash.spec
+
+      - name: Package macOS binary
+        run: cd dist && zip -r stm32_easy_flash_macos.zip stm32_easy_flash*
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stm32-easy-flash-macos
+          path: dist/stm32_easy_flash_macos.zip
+          retention-days: 30
+
   release:
     name: Create GitHub Release
-    runs-on: windows-latest
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     permissions:
       contents: write
 
     steps:
       - name: Prepare release metadata
         id: release-meta
-        shell: pwsh
         run: |
-          $tag = "v2.0.${{ github.run_number }}"
-          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "name=STM32 Easy Flash $tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="v2.0.${{ github.run_number }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "name=STM32 Easy Flash $TAG" >> $GITHUB_OUTPUT
 
-      - name: Download build artifact
+      - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: stm32-easy-flash-windows
-          path: dist
+          path: dist/windows
 
-      - name: Create GitHub Release and upload .exe
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stm32-easy-flash-macos
+          path: dist/macos
+
+      - name: Create GitHub Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release-meta.outputs.tag }}
@@ -123,14 +177,23 @@ jobs:
             ## STM32 Easy Flash ${{ steps.release-meta.outputs.tag }}
 
             ### Download
-            Download `stm32_easy_flash.exe` below and run it directly – no Python installation required.
+            | Platform | Datei | Hinweis |
+            |----------|-------|---------|
+            | Windows  | `stm32_easy_flash.exe` | Direkt ausfuehren, kein Python erforderlich |
+            | macOS    | `stm32_easy_flash_macos.zip` | Entpacken und ausfuehren |
+
+            > **macOS Hinweis:** Beim ersten Start muss die App unter
+            > *Systemeinstellungen → Datenschutz & Sicherheit → Bedienungshilfen*
+            > eingetragen werden, damit der globale Hotkey funktioniert.
 
             ### Erste Schritte
-            1. `stm32_easy_flash.exe` starten
+            1. App starten
             2. Pfade fuer STM32CubeProgrammer CLI und Firmware eintragen
             3. Port auswaehlen (SWD / JTAG / USB1 oder COM-Port aus Dropdown)
-            4. Hotkey konfigurieren (Standard: `Ctrl+Shift+F12`)
-            5. **Speichern** – Konfiguration wird als `stm32_easy_flash.config.json` neben der exe abgelegt
+            4. Hotkey konfigurieren
+               - Windows Standard: `Ctrl+Shift+F12`
+               - macOS Standard: `Cmd+Shift+F12`
+            5. **Speichern** – Konfiguration wird als `stm32_easy_flash.config.json` neben der App abgelegt
             6. **Programm** klicken oder Hotkey druecken – Ausgabe erscheint live im integrierten Terminal
 
             ### Voraussetzungen
@@ -139,4 +202,6 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
-          files: dist/stm32_easy_flash.exe
+          files: |
+            dist/windows/stm32_easy_flash.exe
+            dist/macos/stm32_easy_flash_macos.zip
