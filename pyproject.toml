@@ -10,8 +10,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/stm32-easy-flash"
-Issues = "https://github.com/YOUR_USERNAME/stm32-easy-flash/issues"
+Homepage = "https://github.com/mootseeker/stm32-easy-flash"
+Issues = "https://github.com/mootseeker/stm32-easy-flash/issues"
 
 [build-system]
 requires = ["setuptools>=68"]
