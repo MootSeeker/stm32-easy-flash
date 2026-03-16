@@ -34,7 +34,7 @@ Listens for a global hotkey (`Ctrl+Shift+F12`) and automatically flashes an STM3
 Install the dependency with:
 
 ```bash
-pip install keyboard
+pip install -r requirements/runtime.txt
 ```
 
 > **Note:** On Windows the script must be run with **administrator privileges** for the global hotkey listener to work reliably.
@@ -43,18 +43,27 @@ pip install keyboard
 
 ## Configuration
 
-Open `stm32_easy_flash.py` and adjust the three constants at the top of the file:
+The tool supports runtime config from a JSON file placed next to the script/exe:
 
-```python
-# Path to STM32 Programmer CLI (default path on Windows)
-CLI_PATH = r"C:\ST\STM32CubeProgrammer\bin\STM32_Programmer_CLI.exe"
+- `stm32_easy_flash.config.json`
 
-# Path to your firmware file (.hex, .bin, .elf, …)
-FIRMWARE_PATH = r"C:\path\to\your\firmware.hex"
+Create `stm32_easy_flash.config.json` with the following content:
 
-# Connection type: "SWD" for ST-LINK | "USB1" for DFU | "COM3" for UART
-PORT = "SWD"
+```json
+{
+  "CLI_PATH": "C:\\ST\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe",
+  "FIRMWARE_PATH": "C:\\path\\to\\your\\firmware.hex",
+  "PORT": "SWD",
+  "HOTKEY": "ctrl+shift+f12"
+}
 ```
+
+Optional environment variables (override JSON values):
+
+- `STM32_EASY_FLASH_CLI_PATH`
+- `STM32_EASY_FLASH_FIRMWARE_PATH`
+- `STM32_EASY_FLASH_PORT`
+- `STM32_EASY_FLASH_HOTKEY`
 
 ---
 
@@ -64,7 +73,7 @@ PORT = "SWD"
 python stm32_easy_flash.py
 ```
 
-The script starts and waits in the background. Whenever you press **Ctrl+Shift+F12**, it:
+The script/exe starts and waits in the background. Whenever you press your configured hotkey (default: **Ctrl+Shift+F12**), it:
 
 1. Erases the entire chip
 2. Writes the configured firmware
