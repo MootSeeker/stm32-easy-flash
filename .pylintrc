@@ -1,0 +1,32 @@
+[MAIN]
+# Use multiple processes to speed up Pylint
+jobs=1
+
+[MESSAGES CONTROL]
+disable=
+    # PySide6 C extension – pylint cannot resolve names in compiled modules
+    no-name-in-module,
+    # Python 3.10+ union type hints cause false E1131 on older pylint
+    unsupported-binary-operation,
+    # Qt event handler names follow PascalCase (closeEvent, keyPressEvent …)
+    invalid-name,
+    # GUI MainWindow naturally holds many widget references
+    too-many-instance-attributes,
+    # Internal signal-bridge and small helper classes don't need public methods
+    too-few-public-methods,
+    # setup_ui() is intentionally long – splitting it adds no clarity
+    too-many-statements,
+    # Optional pyserial import inside _detect_com_ports() is intentional
+    import-outside-toplevel
+
+[FORMAT]
+# Match flake8 setting
+max-line-length=120
+
+[DESIGN]
+# GUI dialogs / windows legitimately exceed 15 local variables
+max-locals=20
+
+[SIMILARITIES]
+# Ignore imports when checking for duplicate code
+ignore-imports=yes

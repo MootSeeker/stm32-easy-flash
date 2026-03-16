@@ -75,7 +75,10 @@ class HotkeyService:
             )
             self._listener.start()
             return True, ""
-        except Exception as exc:
+        except OSError as exc:
+            self._listener = None
+            return False, str(exc)
+        except Exception as exc:  # pynput raises various undocumented errors
             self._listener = None
             return False, str(exc)
 
@@ -85,6 +88,6 @@ class HotkeyService:
             if self._listener is not None:
                 try:
                     self._listener.stop()
-                except Exception:
+                except Exception:  # pynput stop() can raise on some platforms
                     pass
                 self._listener = None

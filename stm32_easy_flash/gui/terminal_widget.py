@@ -1,9 +1,12 @@
 """Integrated terminal widget – streams QProcess output in real time."""
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Optional
 
 from PySide6.QtCore import Qt, QProcess, Signal
-from PySide6.QtGui import QAction, QFont, QTextCursor
+from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -25,7 +28,7 @@ class TerminalWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._process: QProcess | None = None
+        self._process: Optional[QProcess] = None
         self._auto_scroll = True
         self._appending = False
         self._stdout_buf = ""
@@ -137,7 +140,10 @@ class TerminalWidget(QWidget):
         QApplication.clipboard().setText(self._text.toPlainText())
 
     def is_running(self) -> bool:
-        return self._process is not None and self._process.state() != QProcess.ProcessState.NotRunning
+        return (
+            self._process is not None
+            and self._process.state() != QProcess.ProcessState.NotRunning
+        )
 
     # -- process management --------------------------------------------------
 
