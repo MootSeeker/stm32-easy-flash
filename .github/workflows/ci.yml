@@ -39,11 +39,14 @@ jobs:
 
       - name: Run flake8 (style & syntax check)
         shell: pwsh
-        run: .\.venv-lint\Scripts\python.exe -m flake8 stm32_easy_flash.py
+        run: .\.venv-lint\Scripts\python.exe -m flake8 main.py stm32_easy_flash/
 
       - name: Run pylint (code quality check)
         shell: pwsh
-        run: .\.venv-lint\Scripts\python.exe -m pylint stm32_easy_flash.py --fail-under=7.0
+        run: >
+          .\.venv-lint\Scripts\python.exe -m pylint main.py stm32_easy_flash/
+          --fail-under=7.0
+          --disable=import-error
 
   build:
     name: Build Executable
@@ -100,7 +103,7 @@ jobs:
         id: release-meta
         shell: pwsh
         run: |
-          $tag = "v1.0.${{ github.run_number }}"
+          $tag = "v2.0.${{ github.run_number }}"
           "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "name=STM32 Easy Flash $tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
@@ -120,23 +123,19 @@ jobs:
             ## STM32 Easy Flash ${{ steps.release-meta.outputs.tag }}
 
             ### Download
-            Download `stm32_easy_flash.exe` below and run it directly - no Python installation required.
+            Download `stm32_easy_flash.exe` below and run it directly – no Python installation required.
 
-            ### Configure
-            Place `stm32_easy_flash.config.json` next to the executable and set:
-            - `CLI_PATH`
-            - `FIRMWARE_PATH`
-            - `PORT`
-            - optional: `HOTKEY`
+            ### Erste Schritte
+            1. `stm32_easy_flash.exe` starten
+            2. Pfade fuer STM32CubeProgrammer CLI und Firmware eintragen
+            3. Port auswaehlen (SWD / JTAG / USB1 oder COM-Port aus Dropdown)
+            4. Hotkey konfigurieren (Standard: `Ctrl+Shift+F12`)
+            5. **Speichern** – Konfiguration wird als `stm32_easy_flash.config.json` neben der exe abgelegt
+            6. **Programm** klicken oder Hotkey druecken – Ausgabe erscheint live im integrierten Terminal
 
-            ### Usage
-            1. Run `stm32_easy_flash.exe`
-            2. Press your configured hotkey (default: `Ctrl+Shift+F12`)
-            3. Flashing starts automatically
-
-            ### Requirements
-            - STM32CubeProgrammer installed at the configured path
-            - ST-LINK or compatible debug adapter connected
+            ### Voraussetzungen
+            - STM32CubeProgrammer am konfigurierten Pfad installiert
+            - ST-LINK oder kompatiblen Debug-Adapter angeschlossen
           generate_release_notes: true
           draft: false
           prerelease: false
