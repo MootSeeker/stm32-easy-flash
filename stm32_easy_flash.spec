@@ -3,11 +3,11 @@
 block_cipher = None
 
 a = Analysis(
-    ['stm32_easy_flash.py'],
+    ['main.py'],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=['keyboard'],
+    hiddenimports=['pynput', 'pynput.keyboard', 'serial.tools.list_ports'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -34,8 +34,8 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    # console=True keeps the terminal window open so flash output is visible
-    console=True,
+    # console=False – GUI application, no console window
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

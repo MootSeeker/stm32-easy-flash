@@ -4,9 +4,11 @@ version = "1.0.0"
 description = "Hotkey-triggered firmware flashing for STM32 microcontrollers via STM32CubeProgrammer CLI"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
-    "keyboard",
+    "pynput",
+    "PySide6",
+    "pyserial",
 ]
 
 [project.urls]

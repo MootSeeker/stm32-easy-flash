@@ -1,2 +1,4 @@
-keyboard
+pynput
+PySide6
+pyserial
 pyinstaller
