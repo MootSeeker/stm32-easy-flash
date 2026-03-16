@@ -1,0 +1,18 @@
+[project]
+name = "stm32-easy-flash"
+version = "1.0.0"
+description = "Hotkey-triggered firmware flashing for STM32 microcontrollers via STM32CubeProgrammer CLI"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "keyboard",
+]
+
+[project.urls]
+Homepage = "https://github.com/mootseeker/stm32-easy-flash"
+Issues = "https://github.com/mootseeker/stm32-easy-flash/issues"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
