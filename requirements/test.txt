@@ -1,0 +1,4 @@
+pynput
+PySide6
+pyserial
+pytest
