@@ -95,6 +95,28 @@ Stop the script at any time with **Ctrl+C** in the terminal.
 
 ---
 
+## Antivirus / Security Warnings
+
+The pre-built executables may be flagged as suspicious by Windows Defender,
+macOS Gatekeeper or third-party antivirus software. **This is a false
+positive** — the source code is fully open and contains no malicious code.
+
+The false detections are caused by how PyInstaller packages Python applications
+(self-extracting to a temp directory, bundled runtime, etc.). This is a
+[well-known PyInstaller issue](https://github.com/pyinstaller/pyinstaller/wiki/FAQ#antivirus-false-positives).
+
+**Workarounds:**
+
+| Platform | Steps |
+|----------|-------|
+| Windows  | Click *More info* → *Run anyway* on the SmartScreen dialog, or add an exclusion in Windows Defender settings. |
+| macOS    | Right-click the app → *Open* → confirm the dialog. Then allow under *System Settings → Privacy & Security → Accessibility*. |
+
+See [Issue #11](https://github.com/MootSeeker/stm32-easy-flash/issues/11) for
+full details and ongoing improvements (code-signing, VirusTotal CI scans).
+
+---
+
 ## License
 
 MIT © 2026 [MootSeeker](https://github.com/MootSeeker)

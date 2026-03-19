@@ -49,10 +49,43 @@ jobs:
           --fail-under=7.0
           --disable=import-error
 
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore test environment cache
+        id: test-cache
+        uses: actions/cache@v4
+        with:
+          path: .venv-test
+          key: ${{ runner.os }}-py311-test-${{ hashFiles('requirements/test.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py311-test-
+
+      - name: Create test environment and install dependencies
+        if: steps.test-cache.outputs.cache-hit != 'true'
+        run: |
+          python3 -m venv .venv-test
+          .venv-test/bin/python -m pip install --upgrade pip
+          .venv-test/bin/python -m pip install -r requirements/test.txt
+
+      - name: Run pytest
+        run: .venv-test/bin/python -m pytest tests/ -v --tb=short
+
   build-windows:
     name: Build Windows Executable
     runs-on: windows-latest
-    needs: lint
+    needs: [lint, test]
 
     steps:
       - name: Checkout repository
@@ -84,6 +117,18 @@ jobs:
         shell: pwsh
         run: .\.venv-build\Scripts\python.exe -m PyInstaller stm32_easy_flash.spec
 
+      - name: Sign Windows executable (optional)
+        if: env.WINDOWS_CERT_BASE64 != ''
+        env:
+          WINDOWS_CERT_BASE64: ${{ secrets.WINDOWS_CERT_BASE64 }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        shell: pwsh
+        run: |
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERT_BASE64)
+          [IO.File]::WriteAllBytes("cert.pfx", $certBytes)
+          & signtool sign /f cert.pfx /p $env:WINDOWS_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 dist\stm32_easy_flash.exe
+          Remove-Item cert.pfx
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -94,7 +139,7 @@ jobs:
   build-macos:
     name: Build macOS Executable
     runs-on: macos-latest
-    needs: lint
+    needs: [lint, test]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
 
     steps:
@@ -125,6 +170,25 @@ jobs:
       - name: Build binary with PyInstaller
         run: .venv-build/bin/python -m PyInstaller stm32_easy_flash.spec
 
+      - name: Sign macOS binary (optional)
+        if: env.APPLE_CERT_BASE64 != ''
+        env:
+          APPLE_CERT_BASE64: ${{ secrets.APPLE_CERT_BASE64 }}
+          APPLE_CERT_PASSWORD: ${{ secrets.APPLE_CERT_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          echo "$APPLE_CERT_BASE64" | base64 --decode > cert.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import cert.p12 -k build.keychain -P "$APPLE_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          codesign --force --deep --sign "$APPLE_TEAM_ID" dist/stm32_easy_flash
+          xcrun notarytool submit dist/stm32_easy_flash --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          rm -f cert.p12
+
       - name: Package macOS binary
         run: cd dist && zip -r stm32_easy_flash_macos.zip stm32_easy_flash*
 
@@ -134,6 +198,28 @@ jobs:
           name: stm32-easy-flash-macos
           path: dist/stm32_easy_flash_macos.zip
           retention-days: 30
+
+  virustotal-scan:
+    name: VirusTotal Scan
+    runs-on: ubuntu-latest
+    needs: [build-windows]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: stm32-easy-flash-windows
+          path: dist/windows
+
+      - name: Upload to VirusTotal
+        if: env.VT_API_KEY != ''
+        uses: crazy-max/ghaction-virustotal@v4
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: dist/windows/stm32_easy_flash.exe
+        env:
+          VT_API_KEY: ${{ secrets.VT_API_KEY }}
 
   release:
     name: Create GitHub Release
