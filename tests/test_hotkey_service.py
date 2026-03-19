@@ -32,9 +32,9 @@ def test_roundtrip():
     assert from_pynput_format(to_pynput_format(original)) == original
 
 
-def test_is_available():
-    """pynput should be importable in the test environment."""
-    assert HotkeyService.is_available() is True
+def test_is_available_returns_bool():
+    """is_available() returns a bool; True when pynput can load, False on headless CI."""
+    assert isinstance(HotkeyService.is_available(), bool)
 
 
 def test_unregister_without_register():

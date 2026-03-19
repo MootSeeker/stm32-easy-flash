@@ -12,7 +12,7 @@ from typing import Callable
 try:
     from pynput import keyboard as _pynput_kb
     _PYNPUT_AVAILABLE = True
-except ImportError:
+except Exception:  # ImportError if missing; ValueError on headless Linux (no DISPLAY)
     _pynput_kb = None
     _PYNPUT_AVAILABLE = False
 
